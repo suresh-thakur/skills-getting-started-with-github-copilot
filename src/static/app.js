@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
         const participantsList = details.participants.length > 0
-          ? details.participants.map(email => `<li>${email}</li>`).join("")
+          ? details.participants.map(email => `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}" aria-label="Remove ${email}">✕</button></li>`).join("")
           : "<li><em>No participants yet</em></li>";
 
         activityCard.innerHTML = `
@@ -43,6 +43,34 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+
+      // Add event listeners to delete buttons
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const activity = btn.getAttribute("data-activity");
+          const email = btn.getAttribute("data-email");
+
+          if (confirm(`Are you sure you want to unregister ${email}?`)) {
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+                { method: "DELETE" }
+              );
+
+              if (response.ok) {
+                fetchActivities(); // Refresh the activity list
+              } else {
+                const error = await response.json();
+                alert(error.detail || "Failed to unregister");
+              }
+            } catch (error) {
+              alert("Error unregistering participant");
+              console.error("Error:", error);
+            }
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
@@ -71,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Refresh the activity list
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
